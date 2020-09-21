@@ -1,1 +1,1 @@
-// pub mod test_message_to_input;
+pub mod test_message_to_input;
