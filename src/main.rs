@@ -1,5 +1,5 @@
 use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch, options_from_environment};
-use crate::event_to_input::test_event_to_input::test_event_to_input::TestMessageToInput;
+use crate::event_to_input::test_event_to_input::test_event_to_input::TestEventToInput;
 use crate::utils::run_on_stream::run_on_stream;
 
 mod event_to_input;
@@ -10,12 +10,12 @@ mod utils;
 #[tokio::main]
 async fn main() {
     let twitch = connect_to_twitch(options_from_environment()).await;
-    run_on_stream(twitch, TestMessageToInput::new()).await;
+    run_on_stream(twitch, TestEventToInput::new()).await;
     
-    // find out how to write unit tests (doc test???), write example for TestMessageToInput, in preparation to write it for ConfiguredMessageToInput
+    // find out how to write unit tests (doc test???), write example for TestEventToInput, in preparation to write it for ConfiguredEventToInput
     // write unit tests for run_on_stream to learn how to write unit tests with Streams
-    // implement ConfiguredMessageToInput passing a configuration Dict<MessageMatcher, ControlInput> (ControlInput e' un enum)
-    // write unit tests for ConfiguredMessageToInput
+    // implement ConfiguredEventToInput passing a configuration Dict<MessageMatcher, ControlInput> (ControlInput e' un enum)
+    // write unit tests for ConfiguredEventToInput
     // ????
     // PROFIT!
     
