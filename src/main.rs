@@ -1,10 +1,11 @@
 use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch, options_from_environment};
-use crate::message_to_input::test_message_to_input::test_message_to_input::TestMessageToInput;
-use crate::message_to_input::run_on_stream::run_on_stream;
+use crate::event_to_input::test_event_to_input::test_event_to_input::TestMessageToInput;
+use crate::utils::run_on_stream::run_on_stream;
 
-mod message_to_input;
+mod event_to_input;
 mod stream_interface;
-mod input_controller;
+mod system_input;
+mod utils;
 
 #[tokio::main]
 async fn main() {

@@ -1,12 +1,12 @@
 use enigo::{Enigo, MouseControllable};
 
-pub struct ControlInput {
+pub struct SystemInput {
     enigo: Enigo,
 }
 
-impl ControlInput {
-    pub fn new() -> ControlInput {
-        ControlInput { enigo: Enigo::new() }
+impl SystemInput {
+    pub fn new() -> SystemInput {
+        SystemInput { enigo: Enigo::new() }
     }
 
     pub fn move_mouse_of(&mut self, x: i32, y: i32) {

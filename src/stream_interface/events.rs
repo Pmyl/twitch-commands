@@ -1,6 +1,16 @@
+use std::fmt::{Display, Formatter, Result};
+
 #[derive(Debug)]
 pub enum ChatEvents {
     Message(ChatMessage)
+}
+
+impl Display for ChatEvents {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            ChatEvents::Message(message) => write!(f, "{}: {}", message.name, message.content)
+        }
+    }
 }
 
 #[derive(Debug)]
