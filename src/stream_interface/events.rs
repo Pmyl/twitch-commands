@@ -8,7 +8,7 @@ pub enum ChatEvents {
 impl Display for ChatEvents {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            ChatEvents::Message(message) => write!(f, "{}: {}", message.name, message.content)
+            ChatEvents::Message(message) => write!(f, "{}: {} - mod: {}", message.name, message.content, message.is_mod.to_string())
         }
     }
 }
@@ -16,5 +16,6 @@ impl Display for ChatEvents {
 #[derive(Debug)]
 pub struct ChatMessage {
     pub name: String,
-    pub content: String
+    pub content: String,
+    pub is_mod: bool
 }

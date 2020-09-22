@@ -1,6 +1,4 @@
 use async_trait::async_trait;
-#[cfg(test)]
-use mockall::{mock, predicate::*};
 use crate::event_to_input::event_to_input::EventToInput;
 use crate::stream_interface::events::{ChatEvents};
 use crate::utils::run_on_stream::StreamItemReceiver;
@@ -40,14 +38,11 @@ async fn execute(_event: ChatEvents, system_input: &mut impl SystemInput) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockall::{mock, predicate::*};
     use crate::stream_interface::events::ChatMessage;
+    use crate::{at, mock_system_input};
 
-    mock! {
-        SystemInput {}
-        trait SystemInput {
-            fn move_mouse_of(&mut self, x: i32, y: i32);
-        }
-    }
+    mock_system_input!();
 
     #[test]
     fn any_event_move_mouse_hundred_pixels_x_y() {
@@ -57,11 +52,9 @@ mod tests {
             .once()
             .return_const(());
 
-        tokio_test::block_on(
-            execute(
-                ChatEvents::Message(ChatMessage { name: "".to_string(), content: "".to_string() }),
-                &mut mock
-            )
-        );
+        at!(execute(
+            ChatEvents::Message(ChatMessage { name: "".to_string(), content: "".to_string(), is_mod: false }),
+            &mut mock
+        ));
     }
 }

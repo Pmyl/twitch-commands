@@ -2,9 +2,10 @@ use twitchchat::{Connector, Dispatcher, Runner};
 use futures::stream::{Stream};
 use futures::stream::StreamExt;
 use dotenv::{from_filename, var, Error as DOTENV_Error};
-use async_stream::stream;
 use std::fmt::{Display, Formatter, Error};
 use crate::stream_interface::events::{ChatEvents, ChatMessage};
+use std::sync::Arc;
+use twitchchat::messages::Privmsg;
 
 pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Item = ChatEvents> {
     println!("Connecting... {}", options);
@@ -35,7 +36,7 @@ pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Ite
     let mut writer = control.writer().clone();
 
     writer.join(channel.clone()).await.unwrap();
-    
+
     eprintln!("Joined channel {}", channel);
 
     dispatcher.clear_subscriptions_all();
@@ -49,17 +50,15 @@ pub fn options_from_environment() -> TwitchConnectOptions {
 }
 
 fn map_events(dispatcher: Dispatcher) -> impl Stream<Item = ChatEvents> {
-    let mut priv_msg = dispatcher.subscribe::<twitchchat::events::Privmsg>();
+    let priv_msg = dispatcher.subscribe::<twitchchat::events::Privmsg>();
 
-    stream! {
-        loop {
-            let item = tokio::select! {
-                Some(p) = priv_msg.next() => ChatEvents::Message(ChatMessage { name: p.name.to_string(), content: p.data.to_string() }),
-            };
-            
-            yield item
-        }
-    }
+    priv_msg.map(|msg: Arc<Privmsg>| {
+        ChatEvents::Message(ChatMessage {
+            name: msg.name.to_string(),
+            content: msg.data.to_string(),
+            is_mod: msg.tags.get("mod").map_or(false, |mod_tag| mod_tag == "1")
+        })
+    })
 }
 
 pub struct TwitchConnectOptions {

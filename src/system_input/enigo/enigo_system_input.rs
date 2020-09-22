@@ -1,4 +1,4 @@
-use enigo::{Enigo, MouseControllable};
+use enigo::{Enigo, MouseControllable, KeyboardControllable, Key};
 use crate::system_input::system_input::SystemInput;
 
 pub struct EnigoSystemInput {
@@ -14,5 +14,13 @@ impl EnigoSystemInput {
 impl SystemInput for EnigoSystemInput {
     fn move_mouse_of(&mut self, x: i32, y: i32) {
         self.enigo.mouse_move_relative(x, y);
+    }
+
+    fn arrow_up(&mut self) {
+        self.enigo.key_click(Key::UpArrow);
+    }
+
+    fn arrow_down(&mut self) {
+        self.enigo.key_click(Key::DownArrow);
     }
 }

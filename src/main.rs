@@ -1,23 +1,23 @@
+use tokio::stream::StreamExt;
 use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch, options_from_environment};
 use crate::event_to_input::test_event_to_input::test_event_to_input::TestEventToInput;
-use crate::utils::run_on_stream::run_on_stream;
+use crate::utils::run_on_stream::{run_on_stream};
+use crate::stream_interface::events::ChatEvents;
 
+mod utils;
 mod event_to_input;
 mod stream_interface;
 mod system_input;
-mod utils;
 
 #[tokio::main]
 async fn main() {
-    let twitch = connect_to_twitch(options_from_environment()).await;
-    run_on_stream(twitch, TestEventToInput::new()).await;
-    
-    // find out how to write unit tests (doc test???), write example for TestEventToInput, in preparation to write it for ConfiguredEventToInput
-    // write unit tests for run_on_stream to learn how to write unit tests with Streams
-    // implement ConfiguredEventToInput passing a configuration Dict<MessageMatcher, ControlInput> (ControlInput e' un enum)
-    // write unit tests for ConfiguredEventToInput
-    // ????
-    // PROFIT!
+    let twitch_event_stream = connect_to_twitch(options_from_environment()).await;
+    let stoppable_twitch_event_stream = stop_on_event!(
+        twitch_event_stream,
+        { ChatEvents::Message(ref message) => message.is_mod && message.content.to_lowercase() == "!stop" }
+    );
+    run_on_stream(stoppable_twitch_event_stream, TestEventToInput::new()).await;
     
     println!("end");
 }
+
