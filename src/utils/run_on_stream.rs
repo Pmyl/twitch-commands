@@ -41,7 +41,7 @@ pub async fn run_on_stream<T: Display>(items: impl Stream<Item = StreamEvent<T>>
 }
 
 /**
- * `stop_on_event(my_stream, { MyEvents:MyEvent(ref evt) => evt.is_stopping, _ => false })`
+ * `stop_on_event!(my_stream, { MyEvents:MyEvent(ref evt) => evt.is_stopping, _ => false })`
  *
  * First parameter is the stream, second parameter is a match body (without `match ev`)
  */

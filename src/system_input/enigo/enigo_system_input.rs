@@ -1,5 +1,6 @@
 use enigo::{Enigo, MouseControllable, KeyboardControllable, Key};
 use crate::system_input::system_input::SystemInput;
+use tokio::time::{Duration, Delay, delay_for};
 
 pub struct EnigoSystemInput {
     enigo: Enigo,
@@ -22,5 +23,9 @@ impl SystemInput for EnigoSystemInput {
 
     fn arrow_down(&mut self) {
         self.enigo.key_click(Key::DownArrow);
+    }
+
+    fn delay_for(&mut self, ms: u64) -> Delay {
+        delay_for(Duration::from_millis(ms))
     }
 }
