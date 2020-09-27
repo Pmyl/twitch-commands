@@ -1,14 +1,14 @@
 use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug)]
-pub enum ChatEvents {
+pub enum ChatEvent {
     Message(ChatMessage)
 }
 
-impl Display for ChatEvents {
+impl Display for ChatEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            ChatEvents::Message(message) => write!(f, "{}: {} - mod: {}", message.name, message.content, message.is_mod.to_string())
+            ChatEvent::Message(message) => write!(f, "{}: {} - mod: {}", message.name, message.content, message.is_mod.to_string())
         }
     }
 }

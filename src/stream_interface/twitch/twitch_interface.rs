@@ -3,11 +3,11 @@ use futures::stream::{Stream};
 use futures::stream::StreamExt;
 use dotenv::{from_filename, var, Error as DOTENV_Error};
 use std::fmt::{Display, Formatter, Error};
-use crate::stream_interface::events::{ChatEvents, ChatMessage};
+use crate::stream_interface::events::{ChatEvent, ChatMessage};
 use std::sync::Arc;
 use twitchchat::messages::Privmsg;
 
-pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Item = ChatEvents> {
+pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Item =ChatEvent> {
     println!("Connecting... {}", options);
     let TwitchConnectOptions { user, token, channel } = options;
     let dispatcher = Dispatcher::new();
@@ -49,14 +49,15 @@ pub fn options_from_environment() -> TwitchConnectOptions {
     TwitchConnectOptions { user: get_user().unwrap(), token: get_token().unwrap(), channel: get_channel().unwrap() }
 }
 
-fn map_events(dispatcher: Dispatcher) -> impl Stream<Item = ChatEvents> {
+fn map_events(dispatcher: Dispatcher) -> impl Stream<Item =ChatEvent> {
     let priv_msg = dispatcher.subscribe::<twitchchat::events::Privmsg>();
 
     priv_msg.map(|msg: Arc<Privmsg>| {
-        ChatEvents::Message(ChatMessage {
+        ChatEvent::Message(ChatMessage {
             name: msg.name.to_string(),
             content: msg.data.to_string(),
             is_mod: msg.tags.get("mod").map_or(false, |mod_tag| mod_tag == "1")
+                || msg.channel == format!("#{}", msg.name) // weird hack: the owner apparently is not a mod and there is no tag to identify the ownership
         })
     })
 }

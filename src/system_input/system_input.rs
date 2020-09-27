@@ -5,6 +5,8 @@ pub trait SystemInput {
     fn arrow_up(&mut self);
     fn arrow_down(&mut self);
     fn delay_for(&mut self, ms: u64) -> Delay;
+    fn key_down(&mut self, raw: u16);
+    fn key_up(&mut self, raw: u16);
 }
 
 #[cfg(test)]
@@ -20,6 +22,8 @@ macro_rules! mock_system_input {
                 fn arrow_up(&mut self);
                 fn arrow_down(&mut self);
                 fn delay_for(&mut self, ms: u64) -> Delay;
+                fn key_down(&mut self, raw: u16);
+                fn key_up(&mut self, raw: u16);
             }
         }
     };

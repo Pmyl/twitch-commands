@@ -28,4 +28,12 @@ impl SystemInput for EnigoSystemInput {
     fn delay_for(&mut self, ms: u64) -> Delay {
         delay_for(Duration::from_millis(ms))
     }
+
+    fn key_down(&mut self, raw: u16) {
+        self.enigo.key_down(Key::Raw(raw))
+    }
+
+    fn key_up(&mut self, raw: u16) {
+        self.enigo.key_up(Key::Raw(raw))
+    }
 }
