@@ -66,7 +66,7 @@ fn event_to_action(event: ChatEvent, config: &Configuration, _system_input: &mut
                 "up" => Some(Action::KeyRawDown(38)),
                 "down" => Some(Action::KeyRawDown(40)),
                 "up_down" => Some(Action::Sequence(vec![Action::KeyRawDown(38), Action::Wait(1000), Action::KeyRawDown(40)])),
-                "find" => Some(Action::Sequence(vec![Action::Parallel(vec![Action::KeyRawDown(17), Action::KeyRawDown(70)]), Action::KeyRawUp(17)])),
+                "find" => Some(Action::Sequence(vec![Action::KeyRawDown(17), Action::KeyRawDown(70), Action::Wait(1000), Action::KeyRawUp(17)])),
                 _ => None
             }
         },

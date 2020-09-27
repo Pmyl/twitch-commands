@@ -44,11 +44,6 @@ pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Ite
     map_events(dispatcher)
 }
 
-pub fn options_from_environment() -> TwitchConnectOptions {
-    from_filename(".env").unwrap();
-    TwitchConnectOptions { user: get_user().unwrap(), token: get_token().unwrap(), channel: get_channel().unwrap() }
-}
-
 fn map_events(dispatcher: Dispatcher) -> impl Stream<Item =ChatEvent> {
     let priv_msg = dispatcher.subscribe::<twitchchat::events::Privmsg>();
 
@@ -66,6 +61,13 @@ pub struct TwitchConnectOptions {
     pub user: String,
     pub token: String,
     pub channel: String
+}
+
+impl TwitchConnectOptions {
+    pub fn from_environment() -> TwitchConnectOptions {
+        from_filename(".env").unwrap();
+        TwitchConnectOptions { user: get_user().unwrap(), token: get_token().unwrap(), channel: get_channel().unwrap() }
+    }
 }
 
 impl Display for TwitchConnectOptions {
