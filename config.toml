@@ -1,0 +1,14 @@
+version = "1.0"
+
+[mapping]
+    [[mapping.config]]
+    source = "message"
+    id = "up"
+    actions = ["kd38"]
+
+    [[mapping.config]]
+    source = "message"
+    id = "updown"
+    actions = ["kd40", "w1000", "kd38"]
+
+

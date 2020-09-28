@@ -12,9 +12,10 @@ use crate::actions::action::{Action, ActionCategory};
 use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch, TwitchConnectOptions};
 use crate::utils::run_on_stream::{run_on_stream};
 use crate::stream_interface::events::ChatEvent;
-use crate::event_to_action::configurable_event_to_action::configurable_event_to_action::{ConfigurableEventToAction, Configuration};
+use crate::event_to_action::configurable_event_to_action::configurable_event_to_action::{ConfigurableEventToAction};
 use crate::actions::handler::ActionHandler;
 use crate::event_to_action::event_to_action::EventToAction;
+use crate::utils::app_config::app_config;
 
 extern crate libc;
 
@@ -34,72 +35,58 @@ mod actions;
 
 #[tokio::main]
 async fn main() {
+    let configuration = app_config();
     let twitch_event_stream = connect_to_twitch(TwitchConnectOptions::from_environment()).await;
     let stoppable_twitch_event_stream = stop_on_event!(
         twitch_event_stream,
         { ChatEvent::Message(ref message) => message.is_mod && message.content.to_lowercase() == "!stop" }
     );
 
-    let mut event_to_action = ConfigurableEventToAction::new(Configuration{options: vec![
-        ("ups".to_string(), "up".to_string()),
-        ("upsdowns".to_string(), "up_down".to_string()),
-        ("find".to_string(), "find".to_string()),
-        ("find_atomic".to_string(), "find_atomic".to_string())
-    ]});
+    let mut event_to_action = ConfigurableEventToAction::new(configuration.mapping.into());
     let custom_categories = event_to_action.custom_categories();
 
     let (category_notifier, mut category_receiver) = channel::<ActionCategory>(100);
     let stream_to_event_to_action = run_on_stream(stoppable_twitch_event_stream, event_to_action, category_notifier);
 
-    let (mut action_queues_notifiers, mut action_queues_receivers) = build_category_queues(custom_categories);
+    let (mut queue_notifiers, mut queue_receivers) = build_category_queues(custom_categories);
 
-    let sender = async move {
-        while let Some(category) = category_receiver.recv().await {
-            match category {
-                ActionCategory::Uncategorized(item) => {
-                    match action_queues_notifiers.get_mut("_uncategorized") {
-                        Some(sender) => {
-                            match sender.send(item).await {
-                                Ok(_) => println!("category_dispatcher::with_category::send_ok"),
-                                Err(e) => println!("category_dispatcher::with_category::send_error::{}", e)
-                            };
-                        },
-                        None => {
-                            // TODO: handle this error
-                            println!("Some weird stuff happened");
-                        }
-                    }
-                }
-                ActionCategory::WithCategory(name, item) => {
-                    match action_queues_notifiers.get_mut(&name) {
-                        Some(sender) => {
-                            match sender.send(item).await {
-                                Ok(_) => println!("category_dispatcher::with_category::send_ok"),
-                                Err(e) => println!("category_dispatcher::with_category::send_error::{}", e)
-                            };
-                        },
-                        None => {
-                            // TODO: handle this error
-                            println!("Some weird stuff happened");
-                        }
-                    }
-                }
-            }
-        }
-    };
+    let action_in_queues_notifier = build_action_in_queues_notifier(&mut category_receiver, &mut queue_notifiers);
+    let actions_runner_queues = queue_receivers.iter_mut().map(|qr| actions_queue(qr.1.borrow_mut()));
+    let actions_runners = async move { join_all(actions_runner_queues).await; };
 
-    let mut futures_to_run = Vec::new();
-
-    for receiver_queue in action_queues_receivers.iter_mut() {
-        let channel = actions_channel(receiver_queue.1.borrow_mut());
-        futures_to_run.push(channel);
-    }
-
-    let final_future = async move { join_all(futures_to_run).await; };
-
-    join3(stream_to_event_to_action, sender, final_future).await;
+    join3(stream_to_event_to_action, action_in_queues_notifier, actions_runners).await;
 
     println!("end");
+}
+
+async fn build_action_in_queues_notifier(category_receiver: &mut Receiver<ActionCategory>, queue_notifiers: &mut HashMap<String, Sender<Action>>) {
+    while let Some(category) = category_receiver.recv().await {
+        let category_name;
+        let action;
+
+        match category {
+            ActionCategory::Uncategorized(item) => {
+                category_name = String::from("_uncategorized");
+                action = item;
+            }
+            ActionCategory::WithCategory(name, item) => {
+                category_name = name.clone();
+                action = item;
+            }
+        }
+
+        match queue_notifiers.get_mut(&category_name) {
+            Some(sender) => {
+                match sender.send(action).await {
+                    Ok(_) => println!("action_in_queues_notifier::send_ok::category::{}", category_name),
+                    Err(e) => println!("action_in_queues_notifier::send_error::{}", e)
+                };
+            },
+            None => {
+                println!("action_in_queues_notifier::error::`received unhandled category {}`", category_name);
+            }
+        }
+    }
 }
 
 fn build_category_queues(custom_categories: Vec<String>) -> (HashMap<String, Sender<Action>, RandomState>, HashMap<String, Receiver<Action>, RandomState>) {
@@ -119,7 +106,7 @@ fn build_category_queues(custom_categories: Vec<String>) -> (HashMap<String, Sen
     (notifiers_hash_map, receivers_hash_map)
 }
 
-async fn actions_channel(rxi: &mut Receiver<Action>) -> () {
+async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
     let mut action_handler = ActionHandler::default();
     let actions_to_enqueue = Arc::new(Mutex::new(Vec::<Action>::new()));
     let actions_to_dequeue = actions_to_enqueue.clone();
