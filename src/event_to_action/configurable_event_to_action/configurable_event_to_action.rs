@@ -1,16 +1,13 @@
-use async_trait::async_trait;
-use tokio::sync::mpsc::Sender;
 use crate::event_to_action::event_to_action::{EventToAction};
 use crate::stream_interface::events::{ChatEvent};
 use crate::utils::run_on_stream::StreamItemReceiver;
 use crate::system_input::system_input::{SystemInput};
 use crate::system_input::enigo::enigo_system_input::EnigoSystemInput;
-use crate::actions::action::Action;
+use crate::actions::action::{Action, ActionCategory};
 
 pub struct ConfigurableEventToAction {
     controller: EnigoSystemInput,
-    configuration: Configuration,
-    sender: Sender<Action>
+    configuration: Configuration
 }
 
 pub struct Configuration {
@@ -26,36 +23,36 @@ impl Default for Configuration {
 }
 
 impl ConfigurableEventToAction {
-    pub fn new(configuration: Configuration, sender: Sender<Action>) -> ConfigurableEventToAction {
-        ConfigurableEventToAction { controller: EnigoSystemInput::new(), configuration, sender }
+    pub fn new(configuration: Configuration) -> ConfigurableEventToAction {
+        ConfigurableEventToAction { controller: EnigoSystemInput::new(), configuration }
     }
 }
 
 impl EventToAction for ConfigurableEventToAction {
-    fn execute(&mut self, event: ChatEvent) -> Option<Action> {
+    fn execute(&mut self, event: ChatEvent) -> Option<ActionCategory> {
         event_to_action(event, &self.configuration, &mut self.controller)
+    }
+
+    fn custom_categories(&mut self) -> Vec<String> {
+        vec![String::from("1")]
     }
 }
 
-#[async_trait]
 impl StreamItemReceiver for ConfigurableEventToAction {
     type Item = ChatEvent;
-    async fn receive(&mut self, event: ChatEvent) {
+    type Output = Option<ActionCategory>;
+    fn receive(&mut self, event: ChatEvent) -> Option<ActionCategory> {
         let maybe_action = self.execute(event);
         match maybe_action {
             Some(action) => {
-                println!("configurable_event_to_action::send_in_channel::({:?})", action);
-                match self.sender.send(action).await {
-                    Ok(_) => println!("configurable_event_to_action::send_ok"),
-                    Err(e) => println!("configurable_event_to_action::send_error::{}", e)
-                }
+                Some(action)
             },
-            _ => ()
+            _ => None
         }
     }
 }
 
-fn event_to_action(event: ChatEvent, config: &Configuration, _system_input: &mut impl SystemInput) -> Option<Action> {
+fn event_to_action(event: ChatEvent, config: &Configuration, _system_input: &mut impl SystemInput) -> Option<ActionCategory> {
     let ChatEvent::Message(message) = event;
     let option = config.options.iter()
         .find(|&opt| { opt.0 == message.content });
@@ -63,10 +60,11 @@ fn event_to_action(event: ChatEvent, config: &Configuration, _system_input: &mut
     match option {
         Some((_, action)) => {
             match action.as_ref() {
-                "up" => Some(Action::KeyRawDown(38)),
-                "down" => Some(Action::KeyRawDown(40)),
-                "up_down" => Some(Action::Sequence(vec![Action::KeyRawDown(38), Action::Wait(1000), Action::KeyRawDown(40)])),
-                "find" => Some(Action::Sequence(vec![Action::KeyRawDown(17), Action::KeyRawDown(70), Action::Wait(1000), Action::KeyRawUp(17)])),
+                "up" => Some(ActionCategory::WithCategory(String::from("1"), Action::KeyRawDown(38))),
+                "down" => Some(ActionCategory::Uncategorized(Action::KeyRawDown(40))),
+                "up_down" => Some(ActionCategory::Uncategorized(Action::Sequence(vec![Action::KeyRawDown(38), Action::WaitFor(1000), Action::KeyRawDown(40)]))),
+                "find" => Some(ActionCategory::Uncategorized(Action::Sequence(vec![Action::KeyRawDown(17), Action::KeyRawDown(70), Action::KeyRawUp(17)]))),
+                "find_atomic" => Some(ActionCategory::Uncategorized(Action::AtomicSequence(vec![Action::KeyRawDown(17), Action::KeyRawDown(70), Action::KeyRawUp(17)]))),
                 _ => None
             }
         },

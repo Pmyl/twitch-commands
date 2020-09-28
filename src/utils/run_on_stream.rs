@@ -1,13 +1,12 @@
 use futures::stream::{Stream};
-use futures::pin_mut;
+use futures::{pin_mut, StreamExt as Ext};
 use std::fmt::Display;
-use async_trait::async_trait;
-use tokio::stream::StreamExt;
+use tokio::sync::mpsc::{Sender};
 
-#[async_trait]
 pub trait StreamItemReceiver {
     type Item;
-    async fn receive(&mut self, item: Self::Item);
+    type Output;
+    fn receive(&mut self, item: Self::Item) -> Self::Output;
 }
 
 pub enum StreamEvent<T> {
@@ -15,7 +14,7 @@ pub enum StreamEvent<T> {
     Stop
 }
 
-pub async fn run_on_stream<T: Display>(items: impl Stream<Item = StreamEvent<T>>, mut item_receiver: impl StreamItemReceiver<Item = T>) {
+pub async fn run_on_stream<T: Display, O>(items: impl Stream<Item = StreamEvent<T>>, mut item_receiver: impl StreamItemReceiver<Item = T, Output = Option<O>>, mut notifier: Sender<O>) {
     pin_mut!(items);
 
     loop {
@@ -24,18 +23,23 @@ pub async fn run_on_stream<T: Display>(items: impl Stream<Item = StreamEvent<T>>
                 match item {
                     StreamEvent::Item(item) => {
                         println!("run_on_stream::received {}", item);
-                        item_receiver.receive(item).await;
+                        if let Some(output) = item_receiver.receive(item) {
+                            match notifier.send(output).await {
+                                Ok(_) => println!("run_on_stream::send_ok"),
+                                Err(e) => println!("run_on_stream::send_error::{}", e)
+                            };
+                        }
                     }
                     StreamEvent::Stop => {
                         println!("run_on_stream::stopped");
-                        break
+                        break;
                     }
                 }
             }
 
             else => {
                 eprintln!("Something bad has happened.");
-                break
+                break;
             }
         }
     }
