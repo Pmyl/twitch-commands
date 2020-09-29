@@ -2,13 +2,15 @@ use tokio::stream::{StreamExt};
 use futures::future::{join_all, join3};
 use tokio::sync::mpsc::{channel};
 use std::borrow::BorrowMut;
+use simplelog::{SimpleLogger, LevelFilter, Config};
+#[macro_use] extern crate log;
 use crate::actions::action::{ActionCategory};
 use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch};
 use crate::utils::run_on_stream::{run_on_stream};
 use crate::stream_interface::events::ChatEvent;
 use crate::event_to_action::configurable_event_to_action::configurable_event_to_action::{ConfigurableEventToAction};
 use crate::event_to_action::event_to_action::EventToAction;
-use crate::utils::app_config::app_config;
+use crate::utils::app_config::{app_config, AppConfig};
 use crate::actions::queue::{action_queue_coordinators, redirect_action_in_queue, actions_queue};
 
 mod utils;
@@ -20,6 +22,8 @@ mod actions;
 #[tokio::main]
 async fn main() {
     let configuration = app_config();
+    init_logger(&configuration);
+
     let twitch_event_stream = connect_to_twitch(configuration.twitch_stream.into()).await;
     let stoppable_twitch_event_stream = stop_on_event!(
         twitch_event_stream,
@@ -39,5 +43,21 @@ async fn main() {
 
     join3(stream_to_event_to_action, action_in_queues_notifier, actions_runners).await;
 
-    println!("end");
+    info!("End of execution");
+}
+
+fn init_logger(configuration: &AppConfig) {
+    let level_filter = match configuration.log_level.as_str() {
+        "off" => LevelFilter::Off,
+        "error" => LevelFilter::Error,
+        "warning" => LevelFilter::Warn,
+        "info" => LevelFilter::Info,
+        "debug" => LevelFilter::Debug,
+        "trace" => LevelFilter::Trace,
+        _ => LevelFilter::Info
+    };
+
+    if let Err(_) = SimpleLogger::init(level_filter, Config::default()) {
+        println!("Failed initializing logger for the application, nothing will be logged.");
+    }
 }

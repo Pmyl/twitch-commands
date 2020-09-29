@@ -9,7 +9,7 @@ use crate::{s};
 use crate::utils::app_config::TwitchStreamConfig;
 
 pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Item =ChatEvent> {
-    println!("Connecting... {}", options);
+    info!("Connecting to stream: {}", options);
     let TwitchConnectOptions { user, token, channel } = options;
     let dispatcher = Dispatcher::new();
 
@@ -27,18 +27,18 @@ pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Ite
         runner.run_to_completion(connector).await
     });
 
-    eprintln!("waiting for irc ready");
+    debug!("waiting for irc ready");
     let ready = dispatcher
         .wait_for::<twitchchat::events::IrcReady>()
         .await
         .unwrap();
-    eprintln!("our nickname: {}", ready.nickname);
+    info!("Our nickname: {}", ready.nickname);
 
     let mut writer = control.writer().clone();
 
     writer.join(channel.clone()).await.unwrap();
 
-    eprintln!("Joined channel {}", channel);
+    info!("Joined channel: {}", channel);
 
     dispatcher.clear_subscriptions_all();
 

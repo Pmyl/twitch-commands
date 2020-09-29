@@ -45,12 +45,12 @@ pub async fn redirect_action_in_queue(category_receiver: &mut Receiver<ActionCat
         match queue_notifiers.get_mut(&category_name) {
             Some(sender) => {
                 match sender.send(action).await {
-                    Ok(_) => println!("redirect_action_in_queue::redirect_ok::category::{}", category_name),
-                    Err(e) => println!("redirect_action_in_queue::redirect_error::{}", e)
+                    Ok(_) => debug!("Redirect OK on category {}", category_name),
+                    Err(e) => error!("redirect_action_in_queue::redirect_error::{}", e)
                 };
             },
             None => {
-                println!("redirect_action_in_queue::error::`received unhandled category {}`", category_name);
+                error!("redirect_action_in_queue::error::`received unhandled category {}`", category_name);
             }
         }
     }
@@ -63,7 +63,7 @@ pub async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
 
     let feeder = async move {
         while let Some(a) = rxi.recv().await {
-            eprintln!("Feed action {:?}", a);
+            debug!("Feed action {:?}", a);
             let mut actions = actions_to_enqueue.lock().unwrap();
             actions.push(a);
             drop(actions);

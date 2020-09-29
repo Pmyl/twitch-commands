@@ -20,7 +20,7 @@ impl ActionHandler {
             return;
         }
         let action = actions.remove(0);
-        println!("Check action type {:?}", action);
+        debug!("Check action type {:?}", action);
 
         match action {
             Action::Sequence(mut vector) => {
@@ -48,11 +48,11 @@ impl ActionHandler {
     }
 
     fn execute(&mut self, action: &Action) {
-        println!("Executing {:?}", action);
+        debug!("Executing {:?}", action);
         match action {
             Action::KeyRawDown(raw) => self.input_system.key_down(*raw),
             Action::KeyRawUp(raw) => self.input_system.key_down(*raw),
-            non_executable_action => eprintln!("Found wrong action nesting, example AtomicSequence with Sequence as an action {:?}", non_executable_action)
+            non_executable_action => error!("Found wrong action nesting, example AtomicSequence with Sequence as an action {:?}", non_executable_action)
         }
     }
 }

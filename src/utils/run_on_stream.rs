@@ -22,23 +22,23 @@ pub async fn run_on_stream<T: Display, O>(items: impl Stream<Item = StreamEvent<
             Some(item) = items.next() => {
                 match item {
                     StreamEvent::Item(item) => {
-                        println!("run_on_stream::received {}", item);
+                        debug!("Received {}", item);
                         if let Some(output) = item_receiver.receive(item) {
                             match notifier.send(output).await {
-                                Ok(_) => println!("run_on_stream::send_ok"),
-                                Err(e) => println!("run_on_stream::send_error::{}", e)
+                                Ok(_) => debug!("Send OK"),
+                                Err(e) => error!("run_on_stream::send_error::{}", e)
                             };
                         }
                     }
                     StreamEvent::Stop => {
-                        println!("run_on_stream::stopped");
+                        error!("run_on_stream::stopped");
                         break;
                     }
                 }
             }
 
             else => {
-                eprintln!("Something bad has happened.");
+                error!("Something bad has happened.");
                 break;
             }
         }

@@ -6,6 +6,8 @@ use serde::de::DeserializeOwned;
 #[derive(Debug)]
 pub struct AppConfig {
     pub version: String,
+    #[serde(default)]
+    pub log_level: String,
     pub twitch_stream: TwitchStreamConfig,
     pub mapping: Mapping
 }
