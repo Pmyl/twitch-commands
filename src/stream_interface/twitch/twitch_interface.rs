@@ -3,9 +3,10 @@ use futures::stream::{Stream};
 use futures::stream::StreamExt;
 use dotenv::{from_filename, var, Error as DOTENV_Error};
 use std::fmt::{Display, Formatter, Error};
-use crate::stream_interface::events::{ChatEvent, ChatMessage};
 use std::sync::Arc;
 use twitchchat::messages::Privmsg;
+use crate::stream_interface::events::{ChatEvent, ChatMessage};
+use crate::{s};
 
 pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Item =ChatEvent> {
     println!("Connecting... {}", options);
@@ -49,8 +50,8 @@ fn map_events(dispatcher: Dispatcher) -> impl Stream<Item =ChatEvent> {
 
     priv_msg.map(|msg: Arc<Privmsg>| {
         ChatEvent::Message(ChatMessage {
-            name: msg.name.to_string(),
-            content: msg.data.to_string(),
+            name: s!(msg.name),
+            content: s!(msg.data),
             is_mod: msg.tags.get("mod").map_or(false, |mod_tag| mod_tag == "1")
                 || msg.channel == format!("#{}", msg.name) // weird hack: the owner apparently is not a mod and there is no tag to identify the ownership
         })

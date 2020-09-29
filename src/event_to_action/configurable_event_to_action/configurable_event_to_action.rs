@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::event_to_action::event_to_action::{EventToAction};
 use crate::stream_interface::events::{ChatEvent};
 use crate::utils::run_on_stream::StreamItemReceiver;
@@ -95,7 +96,23 @@ impl EventToAction for ConfigurableEventToAction {
     }
 
     fn custom_categories(&mut self) -> Vec<String> {
-        vec![String::from("1")]
+        let mut categories_map: HashSet<String> = HashSet::new();
+
+        for option in &self.configuration.message_options {
+            match option.actions {
+                ActionCategory::WithCategory(ref category_name, _) => { categories_map.insert(category_name.clone()); () },
+                _ => ()
+            }
+        }
+
+        for option in &self.configuration.event_options {
+            match option.actions {
+                ActionCategory::WithCategory(ref category_name, _) => { categories_map.insert(category_name.clone()); () },
+                _ => ()
+            }
+        }
+
+        categories_map.into_iter().collect::<Vec<String>>()
     }
 }
 
@@ -124,6 +141,7 @@ fn event_to_action(event: ChatEvent, config: &Configuration) -> Option<ActionCat
 mod tests {
     use super::*;
     use crate::stream_interface::events::ChatMessage;
+    use crate::{s};
 
     impl Configuration {
         fn messages(message_options: Vec<ConfigOption>) -> Self {
@@ -157,12 +175,6 @@ mod tests {
         };
         ($fn_name:ident, action $actions:expr, returns $expected_action:expr) => {
             assert_actions!($fn_name, action $actions, category "", returns $expected_action);
-        }
-    }
-
-    macro_rules! s {
-        ($str:literal) => {
-            $str.to_string()
         }
     }
 
@@ -208,7 +220,39 @@ mod tests {
      action     vec![s!("~w1500~ku10~w1500")],
      returns    ActionCategory::Uncategorized(Action::AtomicSequence(vec![Action::WaitFor(1500), Action::KeyRawUp(10), Action::WaitFor(1500)])));
 
+    #[test]
+    fn configuration_created_without_categories_return_no_custom_categories() {
+        let mut event_to_action = ConfigurableEventToAction {
+            configuration: Configuration {
+                message_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") }],
+                event_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }]
+            }
+        };
+
+        assert_eq!(event_to_action.custom_categories().len(), 0);
+    }
+
+    #[test]
+    fn configuration_created_wit_categories_return_list_of_custom_categories() {
+        let mut event_to_action = ConfigurableEventToAction {
+            configuration: Configuration {
+                message_options: vec![
+                    ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") },
+                    ConfigOption { actions: ActionCategory::WithCategory(s!("1"), Action::KeyRawUp(1)), id: s!("") }
+                ],
+                event_options: vec![
+                    ConfigOption { actions: ActionCategory::WithCategory(s!("custom_text"), Action::KeyRawUp(2)), id: s!("") },
+                    ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }
+                ]
+            }
+        };
+
+        assert_eq!(event_to_action.custom_categories().len(), 2);
+        assert!(event_to_action.custom_categories().contains(&s!("1")));
+        assert!(event_to_action.custom_categories().contains(&s!("custom_text")));
+    }
+
     fn message_event(content: String) -> ChatEvent {
-        ChatEvent::Message(ChatMessage { name: "".to_string(), content, is_mod: false })
+        ChatEvent::Message(ChatMessage { name: s!(""), content, is_mod: false })
     }
 }

@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter, Result};
+use crate::{s};
 
 #[derive(Debug)]
 pub enum ChatEvent {
@@ -8,7 +9,7 @@ pub enum ChatEvent {
 impl Display for ChatEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            ChatEvent::Message(message) => write!(f, "{}: {} - mod: {}", message.name, message.content, message.is_mod.to_string())
+            ChatEvent::Message(message) => write!(f, "{}: {} - mod: {}", message.name, message.content, s!(message.is_mod))
         }
     }
 }

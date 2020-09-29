@@ -1,5 +1,6 @@
 use std::fs;
 use serde::{Deserialize};
+use serde::de::DeserializeOwned;
 
 #[derive(Deserialize)]
 #[derive(Debug)]
@@ -28,16 +29,20 @@ pub fn app_config() -> AppConfig {
     let filename = "config.toml";
     let current_version = "1.0";
 
-    fs::read_to_string(filename)
-        .map_err(|_| format!("file `{}` is missing", filename))
-        .and_then(|file_content| toml::from_str::<AppConfig>(file_content.as_str())
-            .map_err(|_| format!("`{}` content is incorrect", filename)))
+    from_toml_file::<AppConfig>(filename)
         .and_then(|config|
             if config.version != current_version {
-                Err(String::from("Configuration layout changed, update the config file"))
+                Err(format!("Configuration layout changed, update the config file and file version to {}", current_version))
             } else {
                 Ok(config)
             }
         )
         .expect("")
+}
+
+pub fn from_toml_file<T: DeserializeOwned>(filename: &str) -> Result<T, String> {
+    fs::read_to_string(filename)
+        .map_err(|_| format!("file `{}` is missing", filename))
+        .and_then(|file_content| toml::from_str::<T>(file_content.as_str())
+            .map_err(|_| format!("`{}` content is incorrect", filename)))
 }
