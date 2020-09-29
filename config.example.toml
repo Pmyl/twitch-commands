@@ -5,6 +5,15 @@ user = "Bot_Username"
 token = "oauth:some_code"
 channel = "Channel_Name"
 
+# Use mapping.config to configure mapping from stream event to action
+# Prop          Values          Description
+# source        "message"       Only "message" is allowed, will support other kind of events in future (sub_message, reward, etc)
+# id            String          Event identifier, in case of "message" it's the actual message, if it matches the actions will be executed
+# actions       Vec<String>     Actions to execute, it uses custom DSL, check http://www.javascriptkeycode.com/ for key codes
+#                               "kdXX" keydown key code XX
+#                               "kuXX" keyup key code XX
+#                               "wXX" wait XX ms
+#                               "~kdXX~kdYY" keydown both XX and YY
 [mapping]
     [[mapping.config]]
     source = "message"
@@ -14,4 +23,4 @@ channel = "Channel_Name"
     [[mapping.config]]
     source = "message"
     id = "updown"
-    actions = ["kd40", "w1000", "kd38"]
+    actions = ["kd40", "w1000", "~kd40~kd38"]
