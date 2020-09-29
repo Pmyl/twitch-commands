@@ -40,7 +40,7 @@ pub fn app_config() -> AppConfig {
         .expect("")
 }
 
-pub fn from_toml_file<T: DeserializeOwned>(filename: &str) -> Result<T, String> {
+fn from_toml_file<T: DeserializeOwned>(filename: &str) -> Result<T, String> {
     fs::read_to_string(filename)
         .map_err(|_| format!("file `{}` is missing", filename))
         .and_then(|file_content| toml::from_str::<T>(file_content.as_str())
