@@ -1,5 +1,10 @@
 version = "1.0"
 
+[twitch_stream]
+user = "Bot_Username"
+token = "oauth:some_code"
+channel = "Channel_Name"
+
 [mapping]
     [[mapping.config]]
     source = "message"
@@ -10,5 +15,3 @@ version = "1.0"
     source = "message"
     id = "updown"
     actions = ["kd40", "w1000", "kd38"]
-
-

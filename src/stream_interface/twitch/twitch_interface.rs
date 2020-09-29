@@ -1,12 +1,12 @@
 use twitchchat::{Connector, Dispatcher, Runner};
 use futures::stream::{Stream};
 use futures::stream::StreamExt;
-use dotenv::{from_filename, var, Error as DOTENV_Error};
 use std::fmt::{Display, Formatter, Error};
 use std::sync::Arc;
 use twitchchat::messages::Privmsg;
 use crate::stream_interface::events::{ChatEvent, ChatMessage};
 use crate::{s};
+use crate::utils::app_config::TwitchStreamConfig;
 
 pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Item =ChatEvent> {
     println!("Connecting... {}", options);
@@ -64,10 +64,9 @@ pub struct TwitchConnectOptions {
     pub channel: String
 }
 
-impl TwitchConnectOptions {
-    pub fn from_environment() -> TwitchConnectOptions {
-        from_filename(".env").unwrap();
-        TwitchConnectOptions { user: get_user().unwrap(), token: get_token().unwrap(), channel: get_channel().unwrap() }
+impl From<TwitchStreamConfig> for TwitchConnectOptions {
+    fn from(config: TwitchStreamConfig) -> Self {
+        TwitchConnectOptions { user: config.user, token: config.token, channel: config.channel }
     }
 }
 
@@ -75,16 +74,4 @@ impl Display for TwitchConnectOptions {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "User: {}, Channel: {}", &self.user, &self.channel)
     }
-}
-
-fn get_user() -> Result<String, DOTENV_Error> {
-    var("TWITCH_USER")
-}
-
-fn get_token() -> Result<String, DOTENV_Error> {
-    var("TWITCH_TOKEN")
-}
-
-fn get_channel() -> Result<String, DOTENV_Error> {
-    var("TWITCH_CHANNEL")
 }

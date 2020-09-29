@@ -3,7 +3,7 @@ use futures::future::{join_all, join3};
 use tokio::sync::mpsc::{channel};
 use std::borrow::BorrowMut;
 use crate::actions::action::{ActionCategory};
-use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch, TwitchConnectOptions};
+use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch};
 use crate::utils::run_on_stream::{run_on_stream};
 use crate::stream_interface::events::ChatEvent;
 use crate::event_to_action::configurable_event_to_action::configurable_event_to_action::{ConfigurableEventToAction};
@@ -20,7 +20,7 @@ mod actions;
 #[tokio::main]
 async fn main() {
     let configuration = app_config();
-    let twitch_event_stream = connect_to_twitch(TwitchConnectOptions::from_environment()).await;
+    let twitch_event_stream = connect_to_twitch(configuration.twitch_stream.into()).await;
     let stoppable_twitch_event_stream = stop_on_event!(
         twitch_event_stream,
         { ChatEvent::Message(ref message) => message.is_mod && message.content.to_lowercase() == "!stop" }

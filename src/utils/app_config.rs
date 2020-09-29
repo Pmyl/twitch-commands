@@ -6,7 +6,16 @@ use serde::de::DeserializeOwned;
 #[derive(Debug)]
 pub struct AppConfig {
     pub version: String,
+    pub twitch_stream: TwitchStreamConfig,
     pub mapping: Mapping
+}
+
+#[derive(Deserialize)]
+#[derive(Debug)]
+pub struct TwitchStreamConfig {
+    pub user: String,
+    pub token: String,
+    pub channel: String
 }
 
 #[derive(Deserialize)]

@@ -61,7 +61,7 @@ pub async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
     let actions_to_enqueue = Arc::new(Mutex::new(Vec::<Action>::new()));
     let actions_to_dequeue = actions_to_enqueue.clone();
 
-    let receiver = async move {
+    let feeder = async move {
         while let Some(a) = rxi.recv().await {
             eprintln!("Feed action {:?}", a);
             let mut actions = actions_to_enqueue.lock().unwrap();
@@ -70,7 +70,7 @@ pub async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
         }
     };
 
-    let executer = async move {
+    let runner = async move {
         loop {
             if is_mouse_pressed() {
                 delay_for(Duration::from_millis(100)).await;
@@ -84,7 +84,7 @@ pub async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
         }
     };
 
-    join!(receiver, executer);
+    join!(feeder, runner);
 }
 
 fn add_uncategorized(custom_categories: Vec<String>) -> Vec<String> {
