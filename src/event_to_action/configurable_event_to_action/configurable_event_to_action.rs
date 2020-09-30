@@ -68,6 +68,14 @@ fn action_birth(action_to_map: &str) -> Action {
     match action_to_map {
         keydown if keydown.starts_with("kd") => Action::KeyRawDown(keydown.replace("kd", "").parse::<u16>().unwrap()),
         keyup if keyup.starts_with("ku") => Action::KeyRawUp(keyup.replace("ku", "").parse::<u16>().unwrap()),
+        mouse_relative if mouse_relative.starts_with("mr") => {
+            let coordinates = mouse_relative
+                .replace("mr", "")
+                .split("x")
+                .map(|xy| xy.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>();
+            Action::MoveMouseOf(coordinates[0], coordinates[1])
+        },
         wait if wait.starts_with("w") => Action::WaitFor(wait.replace("w", "").parse::<u64>().unwrap()),
         atomic_sequence if atomic_sequence.starts_with("~") =>
             Action::AtomicSequence(atomic_sequence.split("~").skip(1).map(|matryoshka_baby| action_birth(matryoshka_baby)).collect()),
@@ -197,6 +205,10 @@ mod tests {
     assert_actions!(event_match_config_for_ku_number_then_key_up_raw_100,
      action     vec![s!("ku100")],
      returns    ActionCategory::Uncategorized(Action::KeyRawUp(100)));
+
+    assert_actions!(event_match_config_for_mr_coordinates_then_move_mouse,
+     action     vec![s!("mr100x110")],
+     returns    ActionCategory::Uncategorized(Action::MoveMouseOf(100, 110)));
 
     assert_actions!(event_match_config_for_multiple_kd_number_then_sequence_key_down_raw,
      action     vec![s!("kd100"), s!("kd35")],

@@ -1,9 +1,9 @@
 use twitchchat::{Connector, Dispatcher, Runner};
 use futures::stream::{Stream};
-use futures::stream::StreamExt;
+use tokio::stream::StreamExt;
 use std::fmt::{Display, Formatter, Error};
 use std::sync::Arc;
-use twitchchat::messages::Privmsg;
+use twitchchat::messages::{Privmsg};
 use crate::stream_interface::events::{ChatEvent, ChatMessage};
 use crate::{s};
 use crate::utils::app_config::TwitchStreamConfig;

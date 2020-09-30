@@ -6,7 +6,6 @@ use std::ops::DerefMut;
 use std::collections::HashMap;
 use crate::actions::action::{Action, ActionCategory};
 use crate::actions::handler::ActionHandler;
-use crate::utils::is_mouse_pressed::is_mouse_pressed;
 use crate::{s};
 
 const UNCATEGORIZED_CHANNEL_NAME: &str = "_uncategorized";
@@ -72,7 +71,7 @@ pub async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
 
     let runner = async move {
         loop {
-            if is_mouse_pressed() {
+            if !action_handler.can_handle() {
                 delay_for(Duration::from_millis(100)).await;
                 continue;
             }
