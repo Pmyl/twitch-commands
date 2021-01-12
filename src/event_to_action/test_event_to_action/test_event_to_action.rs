@@ -3,7 +3,7 @@ use crate::stream_interface::events::{ChatEvent};
 use crate::utils::run_on_stream::StreamItemReceiver;
 use crate::system_input::system_input::{SystemInput};
 use crate::system_input::enigo::enigo_system_input::EnigoSystemInput;
-use crate::actions::action::{Action, ActionCategory};
+use crate::actions::action::{Action, ActionCategory, ActionLocker, ActionContainer};
 
 pub struct TestEventToAction {
     controller: EnigoSystemInput
@@ -35,5 +35,5 @@ impl StreamItemReceiver for TestEventToAction {
 
 fn execute(_event: ChatEvent, _system_input: &mut impl SystemInput) -> Option<ActionCategory> {
     trace!("test_event_to_action::map_to::(test action key raw 1)");
-    Some(ActionCategory::Uncategorized(Action::KeyRawDown(1)))
+    Some(ActionCategory::Uncategorized(ActionContainer { action: Action::KeyRawDown(1), pause_on: ActionLocker::None }))
 }

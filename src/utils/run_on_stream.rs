@@ -31,7 +31,7 @@ pub async fn run_on_stream<T: Display, O>(items: impl Stream<Item = StreamEvent<
                         }
                     }
                     StreamEvent::Stop => {
-                        error!("run_on_stream::stopped");
+                        info!("run_on_stream::stopped");
                         break;
                     }
                 }

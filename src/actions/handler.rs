@@ -1,4 +1,4 @@
-use crate::actions::action::Action;
+use crate::actions::action::{Action, ActionContainer, ActionLocker};
 use crate::system_input::system_input::SystemInput;
 use crate::system_input::custom_system_input::custom_system_input::CustomSystemInput;
 use std::time::{Instant, Duration};
@@ -15,19 +15,22 @@ impl Default for ActionHandler {
 }
 
 impl ActionHandler {
-    pub fn run(&mut self, actions: &mut Vec<Action>) {
+    pub fn run(&mut self, actions: &mut Vec<ActionContainer>) {
         if actions.is_empty() {
             return;
         }
-        let action = actions.remove(0);
-        debug!("Check action type {:?}", action);
+        let mut action_container = actions.remove(0);
+        debug!("Check action type {:?}", action_container.action);
 
-        match action {
+        match action_container.action {
             Action::Sequence(mut vector) => {
                 let action_in_sequence = vector.remove(0);
-                actions.insert(0, action_in_sequence);
+                action_container.action = action_in_sequence;
+                actions.insert(0, action_container.clone());
                 if vector.len() > 0 {
-                    actions.insert(1, Action::Sequence(vector));
+                    let mut new_container = action_container;
+                    new_container.action = Action::Sequence(vector);
+                    actions.insert(1, new_container);
                 };
             },
             Action::AtomicSequence(vector) => {
@@ -36,19 +39,27 @@ impl ActionHandler {
                 }
             },
             Action::WaitFor(ms) => {
-                actions.insert(0, Action::WaitUntil(Instant::now().add(Duration::from_millis(ms))));
+                action_container.action = Action::WaitUntil(Instant::now().add(Duration::from_millis(ms)));
+                actions.insert(0, action_container);
             },
             Action::WaitUntil(until) => {
                 if until > Instant::now() {
-                    actions.insert(0, action);
+                    actions.insert(0, action_container);
                 }
             },
             executable_action => self.execute(&executable_action)
         };
     }
 
-    pub fn can_handle(&mut self) -> bool {
-        !self.input_system.is_mouse_left_down()
+    pub fn can_handle(&mut self, actions: &mut Vec<ActionContainer>) -> bool {
+        if let Some(action_container) = actions.first() {
+            return match action_container.pause_on {
+                ActionLocker::None => true,
+                ActionLocker::MousePressed => !self.input_system.is_mouse_left_down()
+            }
+        }
+
+        true
     }
 
     fn execute(&mut self, action: &Action) {

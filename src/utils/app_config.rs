@@ -33,7 +33,9 @@ pub struct MappingConfig {
     pub id: String,
     pub actions: Vec<String>,
     #[serde(default)]
-    pub category: String
+    pub category: String,
+    #[serde(default)]
+    pub pause_on: String,
 }
 
 pub fn app_config() -> AppConfig {

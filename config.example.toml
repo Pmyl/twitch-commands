@@ -9,18 +9,25 @@ channel = "Channel_Name"
 # Prop          Values          Description
 # source        "message"       Only "message" is allowed, will support other kind of events in future (sub_message, reward, etc)
 # id            String          Event identifier, in case of "message" it's the actual message, if it matches the actions will be executed
+# category      String          Actions with same category will use a "queue" system by being executed serially and not in parallel,
+#                               if not specified it will default on category "_default_"
 # actions       Vec<String>     Actions to execute, it uses custom DSL, check http://www.javascriptkeycode.com/ for key codes
 #                               "kdXX" keydown key code XX
 #                               "kuXX" keyup key code XX
 #                               "wXX" wait XX ms
+#                               "mmrelXXxYY" move mouse of XX pixels horizontally and YY pixels vertically (negative numbers allowed)
 #                               "~kdXX~kdYY" keydown both XX and YY
+# pause_on      String          Actions will be paused if event is happening, if not specified action can always be executed
+#                               "mld" mouse left click down
 [mapping]
     [[mapping.config]]
+    category = "my category"
     source = "message"
     id = "up"
     actions = ["kd38"]
 
     [[mapping.config]]
+    pause_on = "mld"
     source = "message"
     id = "updown"
     actions = ["kd40", "w1000", "~kd40~kd38"]

@@ -13,9 +13,25 @@ pub enum Action {
     AtomicSequence(Vec<Action>)
 }
 
+#[derive(Debug)]
+#[derive(Clone)]
+#[derive(PartialEq)]
+pub struct ActionContainer {
+    pub action: Action,
+    pub pause_on: ActionLocker
+}
+
+#[derive(Debug)]
+#[derive(Clone)]
+#[derive(PartialEq)]
+pub enum ActionLocker {
+    None,
+    MousePressed
+}
+
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub enum ActionCategory {
-    WithCategory(String, Action),
-    Uncategorized(Action)
+    WithCategory(String, ActionContainer),
+    Uncategorized(ActionContainer)
 }
