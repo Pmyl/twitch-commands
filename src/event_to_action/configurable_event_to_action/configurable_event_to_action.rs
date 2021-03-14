@@ -11,7 +11,7 @@ pub struct ConfigurableEventToAction {
 
 pub struct Configuration {
     pub message_options: Vec<ConfigOption>,
-    pub event_options: Vec<ConfigOption>
+    pub action_options: Vec<ConfigOption>
 }
 
 pub struct ConfigOption {
@@ -27,8 +27,8 @@ impl From<Mapping> for Configuration {
                 .map(|message_action| into_option(message_action))
                 .collect::<Vec<ConfigOption>>(),
 
-            event_options: mapping.config.iter()
-                .filter(|c| c.source == "event")
+            action_options: mapping.config.iter()
+                .filter(|c| c.source == "action")
                 .map(|message_action| into_option(message_action))
                 .collect::<Vec<ConfigOption>>()
         }
@@ -87,7 +87,7 @@ impl Default for Configuration {
     fn default() -> Self {
         Configuration {
             message_options: Vec::new(),
-            event_options: Vec::new()
+            action_options: Vec::new()
         }
     }
 }
@@ -113,7 +113,7 @@ impl EventToAction for ConfigurableEventToAction {
             }
         }
 
-        for option in &self.configuration.event_options {
+        for option in &self.configuration.action_options {
             match option.actions {
                 ActionCategory::WithCategory(ref category_name, _) => { categories_map.insert(category_name.clone()); () },
                 _ => ()
@@ -139,7 +139,11 @@ fn event_to_action(event: ChatEvent, config: &Configuration) -> Option<ActionCat
         ChatEvent::Message(message) => {
             option = config.message_options.iter()
                 .find(|&opt| opt.id == message.content)?;
-        }
+        },
+        ChatEvent::Action(action) => {
+            option = config.action_options.iter()
+                .find(|&opt| opt.id == action.action_id)?;
+        },
     }
 
     Some(option.actions.clone())
@@ -153,7 +157,7 @@ mod tests {
 
     impl Configuration {
         fn messages(message_options: Vec<ConfigOption>) -> Self {
-            Configuration { message_options, event_options: vec![] }
+            Configuration { message_options, action_options: vec![] }
         }
     }
 
@@ -237,7 +241,7 @@ mod tests {
         let mut event_to_action = ConfigurableEventToAction {
             configuration: Configuration {
                 message_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") }],
-                event_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }]
+                action_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }]
             }
         };
 
@@ -252,7 +256,7 @@ mod tests {
                     ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") },
                     ConfigOption { actions: ActionCategory::WithCategory(s!("1"), Action::KeyRawUp(1)), id: s!("") }
                 ],
-                event_options: vec![
+                action_options: vec![
                     ConfigOption { actions: ActionCategory::WithCategory(s!("custom_text"), Action::KeyRawUp(2)), id: s!("") },
                     ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }
                 ]

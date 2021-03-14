@@ -27,7 +27,7 @@ async fn main() {
     let twitch_event_stream = connect_to_twitch(configuration.twitch_stream.into()).await;
     let stoppable_twitch_event_stream = stop_on_event!(
         twitch_event_stream,
-        { ChatEvent::Message(ref message) => message.is_mod && message.content.to_lowercase() == "!stop" }
+        { ChatEvent::Message(ref message) => message.is_mod && message.content.to_lowercase() == "!stop", _ => false }
     );
 
     let mut event_to_action = ConfigurableEventToAction::new(configuration.mapping.into());

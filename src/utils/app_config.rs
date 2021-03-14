@@ -17,7 +17,8 @@ pub struct AppConfig {
 pub struct TwitchStreamConfig {
     pub user: String,
     pub token: String,
-    pub channel: String
+    pub channel: String,
+    pub client_id: String
 }
 
 #[derive(Deserialize)]

@@ -14,11 +14,13 @@ tokio-test = "0.2.1"
 libc = "0.2.77"
 toml = "0.5.6"
 serde = { version = "1.0.116", features = ["derive"] }
+serde_json = "1.0.64"
 log = "0.4.11"
 simplelog = "0.8.0"
 winapi = { version = "0.3.9", features = ["winuser"] }
 twitch_api2 = { version = "0.5.0-alpha.5", features = ["pubsub"] }
 websocket = "0.26.2"
+curl = "0.4.35"
 
 [build-dependencies]
 cc = "1.0.60"
