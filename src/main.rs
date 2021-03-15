@@ -2,7 +2,9 @@ use tokio::stream::{StreamExt};
 use futures::future::{join_all, join3};
 use tokio::sync::mpsc::{channel};
 use std::borrow::BorrowMut;
-use simplelog::{SimpleLogger, LevelFilter, Config};
+use simplelog::{SimpleLogger, LevelFilter, Config, WriteLogger, CombinedLogger, SharedLogger};
+use std::fs::File;
+use chrono::Local;
 #[macro_use] extern crate log;
 use crate::actions::action::{ActionCategory};
 use crate::stream_interface::twitch::twitch_interface::{connect_to_twitch};
@@ -48,7 +50,7 @@ async fn main() {
 
 fn init_logger(configuration: &AppConfig) {
     let level_filter = match configuration.log_level.as_str() {
-        "off" => LevelFilter::Off,
+        "off" => return (),
         "error" => LevelFilter::Error,
         "warning" => LevelFilter::Warn,
         "info" => LevelFilter::Info,
@@ -57,7 +59,24 @@ fn init_logger(configuration: &AppConfig) {
         _ => LevelFilter::Info
     };
 
-    if let Err(_) = SimpleLogger::init(level_filter, Config::default()) {
-        println!("Failed initializing logger for the application, nothing will be logged.");
+    let config_log_to = configuration.log_to.as_str();
+    let log_to = if config_log_to == "" { "terminal" } else { config_log_to };
+    
+    let mut loggers = Vec::<Box<dyn SharedLogger>>::new();
+    
+    if log_to.contains("terminal") {
+        println!("Logging in terminal with log level {}", level_filter);
+        loggers.insert(0, SimpleLogger::new(level_filter, Config::default()))
+    }
+    
+    if log_to.contains("file") {
+        let log_file_name = format!("twitch-commands_{}.log", Local::now().format("%Y%m%d%H%M%S"));
+        println!("Logging in file {} with log level {}", log_file_name, level_filter);
+        loggers.insert(0, WriteLogger::new(level_filter, Config::default(), File::create(log_file_name).unwrap()))
+    }
+    
+
+    if let Err(_) = CombinedLogger::init(loggers) {
+        eprintln!("Failed initializing logger for the application, nothing will be logged.");
     }
 }

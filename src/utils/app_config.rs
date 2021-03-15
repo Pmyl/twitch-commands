@@ -8,6 +8,8 @@ pub struct AppConfig {
     pub version: String,
     #[serde(default)]
     pub log_level: String,
+    #[serde(default)]
+    pub log_to: String,
     pub twitch_stream: TwitchStreamConfig,
     pub mapping: Mapping
 }

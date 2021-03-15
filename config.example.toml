@@ -1,19 +1,27 @@
+# log_level     String          Can be off, error, warning, info, debug, trace. If not specified it's info
+# log_to        String          Can be terminal, file or terminal|file. If not specified it's terminal
 version = "1.0"
+log_level = "info"
 
 [twitch_stream]
 user = "Bot_Username"
-token = "oauth:some_code"
+token = "OAuth_Token_Here"
+client_id = "App_Client_Id"
 channel = "Channel_Name"
 
 # Use mapping.config to configure mapping from stream event to action
 # Prop          Values          Description
-# source        "message"       Only "message" is allowed, will support other kind of events in future (sub_message, reward, etc)
-# id            String          Event identifier, in case of "message" it's the actual message, if it matches the actions will be executed
+# source        String          Either "message" or "action". "action" in case of stream specific actions (twitch channel points redeem, subscriptions, ban, ...)
+# id            String          Event identifier, in case of "message" it's the actual message, if it matches the actions will be executed.
+#                               In case of "action" we have different cases:
+#                               - Channel points reward redeem -> prefix id with "reward_redeem:" and then write the reward name, example: "reward_redeem:Jump!"
 # actions       Vec<String>     Actions to execute, it uses custom DSL, check http://www.javascriptkeycode.com/ for key codes
 #                               "kdXX" keydown key code XX
 #                               "kuXX" keyup key code XX
 #                               "wXX" wait XX ms
 #                               "~kdXX~kdYY" keydown both XX and YY
+# category      String          Category to create a queue of actions. Not specified category has it's own queue, actions with different category
+#                               can be executed in parallel
 [mapping]
     [[mapping.config]]
     source = "message"
