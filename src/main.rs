@@ -1,4 +1,4 @@
-use tokio::stream::{StreamExt};
+use tokio_stream::{StreamExt};
 use futures::future::{join_all, join3};
 use tokio::sync::mpsc::{channel};
 use std::borrow::BorrowMut;

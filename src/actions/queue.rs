@@ -1,6 +1,6 @@
 use futures::{join};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::time::{delay_for, Duration};
+use tokio::time::{sleep, Duration};
 use std::sync::{Arc, Mutex};
 use std::ops::DerefMut;
 use std::collections::HashMap;
@@ -72,14 +72,14 @@ pub async fn actions_queue(rxi: &mut Receiver<Action>) -> () {
     let runner = async move {
         loop {
             if !action_handler.can_handle() {
-                delay_for(Duration::from_millis(100)).await;
+                sleep(Duration::from_millis(100)).await;
                 continue;
             }
 
             let mut actions = actions_to_dequeue.lock().unwrap();
             action_handler.run(actions.deref_mut());
             drop(actions);
-            delay_for(Duration::from_millis(10)).await;
+            sleep(Duration::from_millis(10)).await;
         }
     };
 

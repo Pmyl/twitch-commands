@@ -5,8 +5,9 @@ authors = ["Giulio Caprino <julo134@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-twitchchat = "0.11.8"
-tokio = { version = "0.2", features = ["rt-threaded", "macros"] }
+rand = "0.8.3"
+twitch-irc = { version = "2.2.0", features = ["refreshing-token"] }
+tokio =  { version = "1.3.0", features = ["macros", "rt", "rt-multi-thread"] }
 futures = "0.3.5"
 async-stream = "0.2.1"
 enigo = "0.0.14"
@@ -19,9 +20,12 @@ log = "0.4.11"
 simplelog = "0.8.0"
 winapi = { version = "0.3.9", features = ["winuser"] }
 twitch_api2 = { version = "0.5.0-alpha.5", features = ["pubsub"] }
-websocket = "0.26.2"
+websocket = { version = "0.26.2", features = ["async"] }
 curl = "0.4.35"
 chrono = "0.4.19"
+tokio-tungstenite = { version = "0.14.0", features = ["native-tls"] }
+tokio-stream = { version = "0.1.4", features = ["io-util"] }
+url = "2.2.1"
 
 [build-dependencies]
 cc = "1.0.60"

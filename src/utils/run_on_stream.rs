@@ -14,7 +14,7 @@ pub enum StreamEvent<T> {
     Stop
 }
 
-pub async fn run_on_stream<T: Display, O>(items: impl Stream<Item = StreamEvent<T>>, mut item_receiver: impl StreamItemReceiver<Item = T, Output = Option<O>>, mut notifier: Sender<O>) {
+pub async fn run_on_stream<T: Display, O>(items: impl Stream<Item = StreamEvent<T>>, mut item_receiver: impl StreamItemReceiver<Item = T, Output = Option<O>>, notifier: Sender<O>) {
     pin_mut!(items);
 
     loop {
