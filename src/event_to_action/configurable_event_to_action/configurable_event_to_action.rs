@@ -4,6 +4,7 @@ use crate::stream_interface::events::{ChatEvent};
 use crate::utils::run_on_stream::StreamItemReceiver;
 use crate::actions::action::{Action, ActionCategory};
 use crate::utils::app_config::{Mapping, MappingConfig};
+use std::num::ParseIntError;
 
 pub struct ConfigurableEventToAction {
     configuration: Configuration
@@ -11,12 +12,19 @@ pub struct ConfigurableEventToAction {
 
 pub struct Configuration {
     pub message_options: Vec<ConfigOption>,
-    pub action_options: Vec<ConfigOption>
+    pub action_options: Vec<ConfigActionOption>
 }
 
 pub struct ConfigOption {
     pub id: String,
     pub actions: ActionCategory
+}
+
+pub struct ConfigActionOption {
+    pub id: String,
+    pub actions: ActionCategory,
+    pub comparison: Box<dyn Fn(String) -> bool>,
+    pub action_name: String
 }
 
 impl From<Mapping> for Configuration {
@@ -29,8 +37,8 @@ impl From<Mapping> for Configuration {
 
             action_options: mapping.config.iter()
                 .filter(|c| c.source == "action")
-                .map(|message_action| into_option(message_action))
-                .collect::<Vec<ConfigOption>>()
+                .map(|message_action| into_action_option(message_action))
+                .collect::<Vec<ConfigActionOption>>()
         }
     }
 }
@@ -39,6 +47,41 @@ fn into_option(mapping: &MappingConfig) -> ConfigOption {
     ConfigOption {
         id: mapping.id.clone(),
         actions: condense_actions(mapping.actions.clone(), mapping.category.clone())
+    }
+}
+
+fn into_action_option(mapping: &MappingConfig) -> ConfigActionOption {
+    ConfigActionOption {
+        id: mapping.id.clone(),
+        actions: condense_actions(mapping.actions.clone(), mapping.category.clone()),
+        comparison: into_comparison_fn(mapping.comparison.clone(), mapping.id.clone()),
+        action_name: mapping.name.clone()
+    }
+}
+
+fn into_comparison_fn(comparison_type: String, id: String) -> Box<dyn Fn(String) -> bool> {
+    match comparison_type.as_str() {
+        "range" => comparison_range_builder(id),
+        _ => Box::new(move |s: String| s == id)
+    }
+}
+
+fn comparison_range_builder(range_config: String) -> Box<dyn Fn(String) -> bool> {
+    let ranges = range_config.split("-").collect::<Vec<&str>>().into_iter().map(|s| s.parse::<u64>()).collect::<Vec<Result<u64, ParseIntError>>>();
+
+    if let [Ok(low_bound), Ok(up_bound)] = ranges[..] {
+        Box::new(move |s: String| comparison_range(s, low_bound, up_bound))
+    } else {
+        panic!("Range comparison failed, range config is not properly defined: {}", range_config);
+    }
+}
+
+fn comparison_range(input: String, low_bound: u64, up_bound: u64) -> bool {
+    if let Ok(input_number) = input.parse::<u64>() {
+        low_bound <= input_number && up_bound >= input_number
+    } else {
+        error!("Range comparison failed, input is not a number: {}", input);
+        false
     }
 }
 
@@ -133,20 +176,24 @@ impl StreamItemReceiver for ConfigurableEventToAction {
 }
 
 fn event_to_action(event: ChatEvent, config: &Configuration) -> Option<ActionCategory> {
-    let option;
+    let actions;
 
     match event {
         ChatEvent::Message(message) => {
-            option = config.message_options.iter()
-                .find(|&opt| opt.id == message.content)?;
+            actions = config.message_options.iter()
+                .find(|&opt| opt.id == message.content)?
+                .actions
+                .clone();
         },
         ChatEvent::Action(action) => {
-            option = config.action_options.iter()
-                .find(|&opt| opt.id == action.action_id)?;
+            actions = config.action_options.iter()
+                .find(|&opt| action.action_name == opt.action_name && (opt.comparison)(action.action_id.clone()))?
+                .actions
+                .clone();
         },
     }
 
-    Some(option.actions.clone())
+    Some(actions)
 }
 
 #[cfg(test)]
@@ -177,7 +224,7 @@ mod tests {
             #[test] fn $fn_name() {
                 let maybe_generated = event_to_action(
                     message_event(s!("a message")),
-                    &Mapping { config: vec![MappingConfig { id: s!("a message"), actions: $actions, category: s!($category), source: s!("message") } ] }.into()
+                    &Mapping { config: vec![MappingConfig { id: s!("a message"), actions: $actions, category: s!($category), source: s!("message"), comparison: s!(""), name: s!("") } ] }.into()
                 );
 
                 assert!(maybe_generated.is_some());
@@ -241,7 +288,7 @@ mod tests {
         let mut event_to_action = ConfigurableEventToAction {
             configuration: Configuration {
                 message_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") }],
-                action_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }]
+                action_options: vec![ConfigActionOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|s: String| false) }]
             }
         };
 
@@ -257,8 +304,8 @@ mod tests {
                     ConfigOption { actions: ActionCategory::WithCategory(s!("1"), Action::KeyRawUp(1)), id: s!("") }
                 ],
                 action_options: vec![
-                    ConfigOption { actions: ActionCategory::WithCategory(s!("custom_text"), Action::KeyRawUp(2)), id: s!("") },
-                    ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!("") }
+                    ConfigActionOption { actions: ActionCategory::WithCategory(s!("custom_text"), Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|s: String| false) },
+                    ConfigActionOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|s: String| false) }
                 ]
             }
         };

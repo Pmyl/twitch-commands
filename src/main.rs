@@ -49,34 +49,39 @@ async fn main() {
 }
 
 fn init_logger(configuration: &AppConfig) {
-    let level_filter = match configuration.log_level.as_str() {
-        "off" => return (),
+    let file_log_level = get_log_level(configuration.file_log_level.clone());
+    let terminal_log_level = get_log_level(configuration.terminal_log_level.clone());
+
+    let mut loggers = Vec::<Box<dyn SharedLogger>>::new();
+    if terminal_log_level != LevelFilter::Off {
+        println!("Logging in terminal with log level {}", terminal_log_level);
+        loggers.insert(0, SimpleLogger::new(terminal_log_level, Config::default()))
+    } else {
+        println!("Not logging in terminal");
+    }
+    
+    if file_log_level != LevelFilter::Off {
+        let log_file_name = format!("twitch-commands_{}.log", Local::now().format("%Y%m%d%H%M%S"));
+        println!("Logging in file {} with log level {}", log_file_name, file_log_level);
+        loggers.insert(0, WriteLogger::new(file_log_level, Config::default(), File::create(log_file_name).unwrap()))
+    } else {
+        println!("Not logging in file");
+    }
+    
+
+    if let Err(_) = CombinedLogger::init(loggers) {
+        eprintln!("Failed initializing logger for the application, nothing will be logged.");
+    }
+}
+
+fn get_log_level(log_level: String) -> LevelFilter {
+    match log_level.as_str() {
+        "off" => LevelFilter::Off,
         "error" => LevelFilter::Error,
         "warning" => LevelFilter::Warn,
         "info" => LevelFilter::Info,
         "debug" => LevelFilter::Debug,
         "trace" => LevelFilter::Trace,
         _ => LevelFilter::Info
-    };
-
-    let config_log_to = configuration.log_to.as_str();
-    let log_to = if config_log_to == "" { "terminal" } else { config_log_to };
-    
-    let mut loggers = Vec::<Box<dyn SharedLogger>>::new();
-    
-    if log_to.contains("terminal") {
-        println!("Logging in terminal with log level {}", level_filter);
-        loggers.insert(0, SimpleLogger::new(level_filter, Config::default()))
-    }
-    
-    if log_to.contains("file") {
-        let log_file_name = format!("twitch-commands_{}.log", Local::now().format("%Y%m%d%H%M%S"));
-        println!("Logging in file {} with log level {}", log_file_name, level_filter);
-        loggers.insert(0, WriteLogger::new(level_filter, Config::default(), File::create(log_file_name).unwrap()))
-    }
-    
-
-    if let Err(_) = CombinedLogger::init(loggers) {
-        eprintln!("Failed initializing logger for the application, nothing will be logged.");
     }
 }

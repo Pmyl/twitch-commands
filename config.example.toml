@@ -1,7 +1,8 @@
-# log_level     String          Can be off, error, warning, info, debug, trace. If not specified it's info
-# log_to        String          Can be terminal, file or terminal|file. If not specified it's terminal
+# file_log_level            String          Can be off, error, warning, info, debug, trace. If not specified it's info
+# terminal_log_level        String          Can be off, error, warning, info, debug, trace. If not specified it's info
 version = "1.0"
-log_level = "info"
+file_log_level = "off"
+terminal_log_level = "info"
 
 [twitch_stream]
 user = "Bot_Username"
@@ -12,9 +13,14 @@ channel = "Channel_Name"
 # Use mapping.config to configure mapping from stream event to action
 # Prop          Values          Description
 # source        String          Either "message" or "action". "action" in case of stream specific actions (twitch channel points redeem, subscriptions, ban, ...)
+# name          String          In case of source "message" this is not needed, in case of source "action" this is the name of the action.
+#                               Right now it can be only "reward_redeem" or "bits"
 # id            String          Event identifier, in case of "message" it's the actual message, if it matches the actions will be executed.
 #                               In case of "action" we have different cases:
-#                               - Channel points reward redeem -> prefix id with "reward_redeem:" and then write the reward name, example: "reward_redeem:Jump!"
+#                               - if reward_redeem: this is the name of the reward. Example: "Hydrate!"
+#                               - if bits: this is the amount of bits to trigger the action
+# comparison    String          Works only for source "action", in case of handling an "id" that is a number (for example in case of bits) we can set comparison to "range",
+#                               in that case the id has to be a range written like this XXX-YYY. Example: "10-2000"
 # actions       Vec<String>     Actions to execute, it uses custom DSL, check http://www.javascriptkeycode.com/ for key codes
 #                               "kdXX" keydown key code XX
 #                               "kuXX" keyup key code XX
@@ -32,3 +38,22 @@ channel = "Channel_Name"
     source = "message"
     id = "updown"
     actions = ["kd40", "w1000", "~kd40~kd38"]
+
+    [[mapping.config]]
+    source = "action"
+    id = "Hydrate!"
+    actions = ["kd69"]
+    name = "reward_redeem"
+
+    [[mapping.config]]
+    source = "action"
+    id = "10-20000000"
+    actions = ["kd69"]
+    name = "bits"
+    comparison = "range"
+    
+    [[mapping.config]]
+    source = "action"
+    id = "69"
+    actions = ["kd69"]
+    name = "bits"

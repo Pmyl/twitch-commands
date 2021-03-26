@@ -11,7 +11,7 @@ impl Display for ChatEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             ChatEvent::Message(message) => write!(f, "{}: {} - mod: {}", message.name, message.content, s!(message.is_mod)),
-            ChatEvent::Action(action) => write!(f, "{}: {}", action.name, action.action_id)
+            ChatEvent::Action(action) => write!(f, "{}: {} - {}", action.name, action.action_name, action.action_id)
         }
     }
 }
@@ -26,5 +26,6 @@ pub struct ChatMessage {
 #[derive(Debug)]
 pub struct ChatAction {
     pub name: String,
-    pub action_id: String
+    pub action_id: String,
+    pub action_name: String
 }

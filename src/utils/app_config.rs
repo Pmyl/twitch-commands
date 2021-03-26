@@ -7,9 +7,9 @@ use serde::de::DeserializeOwned;
 pub struct AppConfig {
     pub version: String,
     #[serde(default)]
-    pub log_level: String,
+    pub file_log_level: String,
     #[serde(default)]
-    pub log_to: String,
+    pub terminal_log_level: String,
     pub twitch_stream: TwitchStreamConfig,
     pub mapping: Mapping
 }
@@ -36,7 +36,11 @@ pub struct MappingConfig {
     pub id: String,
     pub actions: Vec<String>,
     #[serde(default)]
-    pub category: String
+    pub name: String,
+    #[serde(default)]
+    pub category: String,
+    #[serde(default)]
+    pub comparison: String
 }
 
 pub fn app_config() -> AppConfig {
