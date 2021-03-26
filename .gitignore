@@ -13,5 +13,5 @@ Cargo.lock
 .idea
 .env
 config.toml
-.http
-.log
+**/*.http
+**/*.log
