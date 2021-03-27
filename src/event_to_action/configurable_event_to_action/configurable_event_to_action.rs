@@ -17,8 +17,35 @@ pub struct Configuration {
 }
 
 pub trait ConfigOptionWithActions {
+    fn get_actions(&self) -> ActionCategory;
+    fn get_times(&self) -> Option<u16>;
+    fn set_times(&mut self, times: u16);
+}
+
+pub trait ConfigOptionWithActionsTrait {
     fn consume_actions(&mut self) -> ActionCategory;
     fn can_be_executed(&self) -> bool;
+}
+
+impl<T: ConfigOptionWithActions> ConfigOptionWithActionsTrait for T {
+    fn consume_actions(&mut self) -> ActionCategory {
+        match self.get_times() {
+            None => self.get_actions(),
+            Some(limit) => {
+                if limit > 0 {
+                    self.set_times(limit - 1);
+                } else {
+                    error!("Actions consumed even if it finished the limit, something wrong with the code!");
+                }
+
+                self.get_actions()
+            }
+        }
+    }
+
+    fn can_be_executed(&self) -> bool {
+        self.get_times().is_none() || self.get_times().unwrap() > 0
+    }
 }
 
 #[derive(Derivative)]
@@ -31,23 +58,16 @@ pub struct ConfigOption {
 }
 
 impl ConfigOptionWithActions for ConfigOption {
-    fn consume_actions(&mut self) -> ActionCategory {
-        match self.times_limit {
-            None => self.actions.clone(),
-            Some(limit) => {
-                if limit > 0 {
-                    self.times_limit = Some(limit - 1);
-                } else {
-                    error!("Actions consumed even if it finished the limit, something wrong with the code!");
-                }
-
-                self.actions.clone()
-            }
-        }
+    fn get_actions(&self) -> ActionCategory {
+        self.actions.clone()
     }
-
-    fn can_be_executed(&self) -> bool {
-        self.times_limit.is_none() || self.times_limit.unwrap() > 0
+    
+    fn get_times(&self) -> Option<u16> {
+        self.times_limit
+    }
+    
+    fn set_times(&mut self, times: u16) {
+        self.times_limit = Some(times);
     }
 }
 
@@ -64,23 +84,16 @@ pub struct ConfigActionOption {
 }
 
 impl ConfigOptionWithActions for ConfigActionOption {
-    fn consume_actions(&mut self) -> ActionCategory {
-        match self.times_limit {
-            None => self.actions.clone(),
-            Some(limit) => {
-                if limit > 0 {
-                    self.times_limit = Some(limit - 1);
-                } else {
-                    error!("Actions consumed even if it finished the limit, something wrong with the code!");
-                }
-
-                self.actions.clone()
-            }
-        }
+    fn get_actions(&self) -> ActionCategory {
+        self.actions.clone()
     }
 
-    fn can_be_executed(&self) -> bool {
-        self.times_limit.is_none() || self.times_limit.unwrap() > 0
+    fn get_times(&self) -> Option<u16> {
+        self.times_limit
+    }
+
+    fn set_times(&mut self, times: u16) {
+        self.times_limit = Some(times);
     }
 }
 
@@ -253,8 +266,6 @@ fn event_to_action(event: ChatEvent, config: &mut Configuration) -> Option<Actio
             info!("Executing action {:?} from event {:?}", option, event);
         },
     }
-    
-    
 
     Some(actions)
 }
