@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter, Result};
 use crate::{s};
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub enum ChatEvent {
     Message(ChatMessage),
     Action(ChatAction)
@@ -17,12 +18,14 @@ impl Display for ChatEvent {
 }
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct ChatMessage {
     pub name: String,
     pub content: String,
     pub is_mod: bool
 }
 
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct ChatAction {
     pub name: String,

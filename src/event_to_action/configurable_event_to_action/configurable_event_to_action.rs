@@ -5,6 +5,7 @@ use crate::utils::run_on_stream::StreamItemReceiver;
 use crate::actions::action::{Action, ActionCategory};
 use crate::utils::app_config::{Mapping, MappingConfig};
 use std::num::ParseIntError;
+use derivative::{Derivative};
 
 pub struct ConfigurableEventToAction {
     configuration: Configuration
@@ -15,16 +16,72 @@ pub struct Configuration {
     pub action_options: Vec<ConfigActionOption>
 }
 
-pub struct ConfigOption {
-    pub id: String,
-    pub actions: ActionCategory
+pub trait ConfigOptionWithActions {
+    fn consume_actions(&mut self) -> ActionCategory;
+    fn can_be_executed(&self) -> bool;
 }
 
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct ConfigOption {
+    pub id: String,
+    #[derivative(Debug="ignore")]
+    pub actions: ActionCategory,
+    pub times_limit: Option<u16>
+}
+
+impl ConfigOptionWithActions for ConfigOption {
+    fn consume_actions(&mut self) -> ActionCategory {
+        match self.times_limit {
+            None => self.actions.clone(),
+            Some(limit) => {
+                if limit > 0 {
+                    self.times_limit = Some(limit - 1);
+                } else {
+                    error!("Actions consumed even if it finished the limit, something wrong with the code!");
+                }
+
+                self.actions.clone()
+            }
+        }
+    }
+
+    fn can_be_executed(&self) -> bool {
+        self.times_limit.is_none() || self.times_limit.unwrap() > 0
+    }
+}
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct ConfigActionOption {
     pub id: String,
+    #[derivative(Debug="ignore")]
     pub actions: ActionCategory,
+    #[derivative(Debug="ignore")]
     pub comparison: Box<dyn Fn(String) -> bool>,
-    pub action_name: String
+    pub action_name: String,
+    pub times_limit: Option<u16>
+}
+
+impl ConfigOptionWithActions for ConfigActionOption {
+    fn consume_actions(&mut self) -> ActionCategory {
+        match self.times_limit {
+            None => self.actions.clone(),
+            Some(limit) => {
+                if limit > 0 {
+                    self.times_limit = Some(limit - 1);
+                } else {
+                    error!("Actions consumed even if it finished the limit, something wrong with the code!");
+                }
+
+                self.actions.clone()
+            }
+        }
+    }
+
+    fn can_be_executed(&self) -> bool {
+        self.times_limit.is_none() || self.times_limit.unwrap() > 0
+    }
 }
 
 impl From<Mapping> for Configuration {
@@ -46,7 +103,8 @@ impl From<Mapping> for Configuration {
 fn into_option(mapping: &MappingConfig) -> ConfigOption {
     ConfigOption {
         id: mapping.id.clone(),
-        actions: condense_actions(mapping.actions.clone(), mapping.category.clone())
+        actions: condense_actions(mapping.actions.clone(), mapping.category.clone()),
+        times_limit: mapping.limit
     }
 }
 
@@ -55,7 +113,8 @@ fn into_action_option(mapping: &MappingConfig) -> ConfigActionOption {
         id: mapping.id.clone(),
         actions: condense_actions(mapping.actions.clone(), mapping.category.clone()),
         comparison: into_comparison_fn(mapping.comparison.clone(), mapping.id.clone()),
-        action_name: mapping.name.clone()
+        action_name: mapping.name.clone(),
+        times_limit: mapping.limit
     }
 }
 
@@ -143,7 +202,7 @@ impl ConfigurableEventToAction {
 
 impl EventToAction for ConfigurableEventToAction {
     fn execute(&mut self, event: ChatEvent) -> Option<ActionCategory> {
-        event_to_action(event, &self.configuration)
+        event_to_action(event, &mut self.configuration)
     }
 
     fn custom_categories(&mut self) -> Vec<String> {
@@ -175,23 +234,27 @@ impl StreamItemReceiver for ConfigurableEventToAction {
     }
 }
 
-fn event_to_action(event: ChatEvent, config: &Configuration) -> Option<ActionCategory> {
+fn event_to_action(event: ChatEvent, config: &mut Configuration) -> Option<ActionCategory> {
     let actions;
 
-    match event {
+    match event.clone() {
         ChatEvent::Message(message) => {
-            actions = config.message_options.iter()
-                .find(|&opt| opt.id == message.content)?
-                .actions
-                .clone();
+            let option = config.message_options.iter_mut()
+                .filter(|opt| opt.can_be_executed())
+                .find(|opt| opt.id == message.content)?;
+            actions = option.consume_actions();
+            info!("Executing action {:?} from event {:?}", option, event);
         },
         ChatEvent::Action(action) => {
-            actions = config.action_options.iter()
-                .find(|&opt| action.action_name == opt.action_name && (opt.comparison)(action.action_id.clone()))?
-                .actions
-                .clone();
+            let option = config.action_options.iter_mut()
+                .filter(|opt| opt.can_be_executed())
+                .find(|opt| action.action_name == opt.action_name && (opt.comparison)(action.action_id.clone()))?;
+            actions = option.consume_actions();
+            info!("Executing action {:?} from event {:?}", option, event);
         },
     }
+    
+    
 
     Some(actions)
 }
@@ -213,7 +276,7 @@ mod tests {
             #[test] fn $fn_name() {
                 assert!(event_to_action(
                     message_event(s!($message)),
-                    &$config
+                    &mut $config
                 ).is_none());
             }
         }
@@ -224,7 +287,7 @@ mod tests {
             #[test] fn $fn_name() {
                 let maybe_generated = event_to_action(
                     message_event(s!("a message")),
-                    &Mapping { config: vec![MappingConfig { id: s!("a message"), actions: $actions, category: s!($category), source: s!("message"), comparison: s!(""), name: s!("") } ] }.into()
+                    &mut Mapping { config: vec![MappingConfig { id: s!("a message"), actions: $actions, category: s!($category), source: s!("message"), comparison: s!(""), name: s!(""), limit: None } ] }.into()
                 );
 
                 assert!(maybe_generated.is_some());
@@ -239,10 +302,10 @@ mod tests {
 
     assert_return_nothing!(empty_event_empty_config_return_nothing, "", Configuration::default());
     assert_return_nothing!(event_says_up_config_not_match_return_nothing, "I said up",
-        Configuration::messages(vec![ConfigOption { id: s!(""), actions: ActionCategory::Uncategorized(Action::WaitFor(1)) }])
+        Configuration::messages(vec![ConfigOption { id: s!(""), actions: ActionCategory::Uncategorized(Action::WaitFor(1)), times_limit: None }])
     );
     assert_return_nothing!(empty_message_config_for_up_return_nothing, "",
-        Configuration::messages(vec![ConfigOption { id: s!("I said up"), actions: ActionCategory::Uncategorized(Action::WaitFor(1)) }])
+        Configuration::messages(vec![ConfigOption { id: s!("I said up"), actions: ActionCategory::Uncategorized(Action::WaitFor(1)), times_limit: None }])
     );
 
     assert_actions!(event_match_config_for_kd_number_then_key_down_raw_40,
@@ -287,8 +350,8 @@ mod tests {
     fn configuration_created_without_categories_return_no_custom_categories() {
         let mut event_to_action = ConfigurableEventToAction {
             configuration: Configuration {
-                message_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") }],
-                action_options: vec![ConfigActionOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|s: String| false) }]
+                message_options: vec![ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!(""), times_limit: None }],
+                action_options: vec![ConfigActionOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|_: String| false), times_limit: None }]
             }
         };
 
@@ -300,12 +363,12 @@ mod tests {
         let mut event_to_action = ConfigurableEventToAction {
             configuration: Configuration {
                 message_options: vec![
-                    ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!("") },
-                    ConfigOption { actions: ActionCategory::WithCategory(s!("1"), Action::KeyRawUp(1)), id: s!("") }
+                    ConfigOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(1)), id: s!(""), times_limit: None },
+                    ConfigOption { actions: ActionCategory::WithCategory(s!("1"), Action::KeyRawUp(1)), id: s!(""), times_limit: None }
                 ],
                 action_options: vec![
-                    ConfigActionOption { actions: ActionCategory::WithCategory(s!("custom_text"), Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|s: String| false) },
-                    ConfigActionOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|s: String| false) }
+                    ConfigActionOption { actions: ActionCategory::WithCategory(s!("custom_text"), Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|_: String| false), times_limit: None },
+                    ConfigActionOption { actions: ActionCategory::Uncategorized(Action::KeyRawUp(2)), id: s!(""), action_name: s!(""), comparison: Box::new(|_: String| false), times_limit: None }
                 ]
             }
         };

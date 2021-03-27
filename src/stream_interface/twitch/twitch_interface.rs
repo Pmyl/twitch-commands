@@ -19,7 +19,8 @@ pub async fn connect_to_twitch(options: TwitchConnectOptions) -> impl Stream<Ite
 }
 
 async fn create_messages_stream(options: TwitchConnectOptions) -> impl Stream<Item = ChatEvent> {
-    let config = ClientConfig::new_simple(StaticLoginCredentials::new(options.user, Some(options.token)));
+    let TwitchConnectOptions { user, token, channel: channel_to_log_into, .. } = options;
+    let config = ClientConfig::new_simple(StaticLoginCredentials::new(user, Some(token)));
     let (mut incoming_messages, client) =
         TwitchIRCClient::<TCPTransport, StaticLoginCredentials>::new(config);
     
@@ -48,7 +49,7 @@ async fn create_messages_stream(options: TwitchConnectOptions) -> impl Stream<It
             }
         });
 
-        client.join("pranessa".to_owned());
+        client.join(channel_to_log_into);
 
         join_handle.await.unwrap();
     });

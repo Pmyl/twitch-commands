@@ -40,7 +40,8 @@ pub struct MappingConfig {
     #[serde(default)]
     pub category: String,
     #[serde(default)]
-    pub comparison: String
+    pub comparison: String,
+    pub limit: Option<u16>
 }
 
 pub fn app_config() -> AppConfig {
